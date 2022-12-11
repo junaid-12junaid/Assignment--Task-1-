@@ -1,6 +1,6 @@
 const userModel = require("../Model/userModel")
 const {isValid, isValidName, isValidEmail, isValidPassword, keyValid } = require('../validator/validator')
-
+const bcrypt=require('bcrypt')
 
 const jwt = require('jsonwebtoken')
 
@@ -26,9 +26,10 @@ const createUser = async function (req, res) {
 
         if (!isValidPassword(password)) return res.status(400).send({ status: false, message: "please provide Valid password with 1st letter should be Capital letter and contains spcial character with Min length 8 and Max length 15" })
 
+        const encyptPassword = await bcrypt.hash(password, 10)
 
         let obj = {
-            name, email,password
+            name, email,password:encyptPassword
         }
 
         const newUser = await userModel.create(obj)
@@ -57,9 +58,14 @@ const loginUser = async function (req, res) {
 
         if (!isValid(password)) return res.status(400).send({ status: false, message: "Password is mandatory and should have non empty String" })
 
-        const user = await userModel.findOne({ email: email ,password:password})
+         const user = await userModel.findOne({ email: email })
 
-        if (!user) return res.status(400).send({ status: false, msg: "Email || pasword is Invalid Please try again !!" })
+         if (!user) return res.status(400).send({ status: false, msg: "Email is Invalid Please try again !!" })
+ 
+         const verifyPassword = await bcrypt.compare(password, user.password)
+ 
+         if (!verifyPassword) return res.status(400).send({ status: false, msg: "Password is Invalid Please try again !!" })
+
 
         const token = jwt.sign({
             userId: user._id.toString()
